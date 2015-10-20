@@ -4,6 +4,10 @@ MongoID._looksLikeObjectID = function (str) {
   return str.length === 24 && str.match(/^[0-9a-f]*$/);
 };
 
+MongoID._looksLikeUUID = function (str) {
+  return str.length === 36 && str.match(/[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}/);
+};
+
 MongoID.ObjectID = function (hexString) {
   //random-based impl of Mongo ObjectID
   var self = this;
@@ -53,6 +57,24 @@ EJSON.addType("oid",  function (str) {
   return new MongoID.ObjectID(str);
 });
 
+MongoID._toHexStr = function(ua, start, end) {
+  var h = '';
+  for (var i = start; i < ua.length && i < end; i++) {
+    var val = ua[i].toString(16);
+    if (val.length === 1) val = '0' + val;
+    h += val;
+  }
+  return h;
+}
+
+MongoID._fromHexStr = function(hex) {
+  var ua = new Uint8Array(16);
+  for(var i = 0; i < ua.length; i++) {
+    ua[i] = parseInt(hex.substr(i*2, 2), 16);
+  }
+  return ua;
+}
+
 MongoID.idStringify = function (id) {
   if (id instanceof MongoID.ObjectID) {
     return id.valueOf();
@@ -70,6 +92,10 @@ MongoID.idStringify = function (id) {
   } else if (id === undefined) {
     return '-';
   } else if (typeof id === 'object' && id !== null) {
+    if (id instanceof Uint8Array && id.length === 16 && Meteor.isServer) {
+      var uuid = MongoID._toHexStr(id, 0, 4) + '-' + MongoID._toHexStr(id, 4, 6) + '-' + MongoID._toHexStr(id, 6, 8) + '-' + MongoID._toHexStr(id, 8, 10) + '-' + MongoID._toHexStr(id, 10, 16);
+      return uuid;
+    }
     throw new Error("Meteor does not currently support objects other than ObjectID as ids");
   } else { // Numbers, true, false, null
     return "~" + JSON.stringify(id);
@@ -86,10 +112,11 @@ MongoID.idParse = function (id) {
     return id.substr(1);
   } else if (id.substr(0, 1) === '~') {
     return JSON.parse(id.substr(1));
+  } else if(MongoID._looksLikeUUID(id) && Meteor.isServer) {
+    return MongoID._fromHexStr(id.replace(/-/g, ''));
   } else if (MongoID._looksLikeObjectID(id)) {
     return new MongoID.ObjectID(id);
   } else {
     return id;
   }
 };
-

@@ -870,6 +870,7 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
               self._collection, args);
           }
 
+
           // This is the server receiving a method call from the client.
 
           // We don't allow arbitrary selectors in mutations from the client: only
@@ -904,6 +905,7 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
             //     invoke it. Bam, broken DDP connection.  Probably should just
             //     take this whole method and write it three times, invoking
             //     helpers for the common code.
+            args[0]._id = MongoID.idParse(args[0]._id);
             return self._collection[method].apply(self._collection, args);
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing

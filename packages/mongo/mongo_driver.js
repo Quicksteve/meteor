@@ -82,6 +82,9 @@ var replaceMeteorAtomWithMongo = function (document) {
     // This does more copies than we'd like, but is necessary because
     // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
     // serialize it correctly).
+    if (document instanceof Uint8Array && document.length == 16) {
+        return new MongoDB.Binary(new Buffer(document), 4);
+    }
     return new MongoDB.Binary(new Buffer(document));
   }
   if (document instanceof Mongo.ObjectID) {
